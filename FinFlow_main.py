@@ -161,3 +161,61 @@ class FinanceBot:
         else:
             # Если это не команда и не кнопка, считаем что пользователь ввел сумму
             await self.hand_amnt(update, context, user_id, text)
+
+    async def hand_amnt(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: str, text: str):
+        """
+        Обрабатывает ввод суммы для дохода или расхода.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param context: Контекст выполнения, содержит дополнительные данные
+        :type context: telegram.ext.ContextTypes.DEFAULT_TYPE
+        :param user_id: ID пользователя в Telegram
+        :type user_id: str
+        :param text: Текст сообщения, который должен содержать сумму
+        :type text: str
+        :raises ValueError: Если текст не может быть преобразован в число
+        """
+        try:
+            # Пытаемся преобразовать текст в число с плавающей точкой
+            amount = float(text)
+            # Получаем тип операции (доход/расход) из временных данных
+            action = context.user_data.get("action")
+            # Получаем выбранную категорию
+            category = context.user_data.get("category")
+
+            # Проверяем что все необходимые данные есть
+            if not action or not category:
+                await update.message.reply_text("Ошибка: не выбрано действие или категория")
+                return  # прерываем выполнение если данных нет
+
+            # Если у пользователя еще нет данных, создаем пустой список
+            if user_id not in self.data:
+                self.data[user_id] = []
+
+            # Создаем запись о транзакции
+            record = {
+                "type": "income" if action == "income" else "expense",  # тип операции
+                "amount": amount,  # сумма
+                "category": category  # категория
+            }
+
+            # Добавляем запись в данные пользователя
+            self.data[user_id].append(record)
+            # Сохраняем все данные в файл
+            self.save_data()
+
+            # Показываем главную клавиатуру снова
+            keyboard = ReplyKeyboardMarkup(self.kb, resize_keyboard=True)
+            # Подтверждаем добавление операции
+            await update.message.reply_text(
+                f"{category} {amount} руб. добавлен!",  # сообщение подтверждения
+                reply_markup=keyboard  # возвращаем главную клавиатуру
+            )
+
+            # Очищаем временные данные пользователя
+            context.user_data.clear()
+
+        except ValueError:
+            # Если преобразование в число не удалось
+            await update.message.reply_text("Введите число!")
