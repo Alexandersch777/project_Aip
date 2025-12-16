@@ -122,3 +122,42 @@ class FinanceBot:
             keyboard = ReplyKeyboardMarkup(self.inc_cat, resize_keyboard=True)
             # Просим выбрать категорию
             await update.message.reply_text("Выберите категорию дохода:", reply_markup=keyboard)
+
+        # Обрабатываем нажатие кнопки "Расход"
+        elif text == "Расход":
+            context.user_data["action"] = "expense"  # сохраняем тип операции
+            keyboard = ReplyKeyboardMarkup(self.exp_cat, resize_keyboard=True)
+            await update.message.reply_text("Выберите категорию расхода:", reply_markup=keyboard)
+        # Обрабатываем нажатие кнопки "Баланс"
+        elif text == "Баланс":
+            # Вызываем функцию показа баланса
+            await self.show_bal(update, user_id)
+        # Обрабатываем нажатие кнопки "Статистика"
+        elif text == "Статистика":
+            # Вызываем функцию показа статистики с диаграммами
+            await self.show_stat(update, user_id)
+        # Обрабатываем нажатие кнопки "Категории"
+        elif text == "Категории":
+            await self.show_cat(update, user_id)
+        # Обрабатываем выбор категорий расходов (все кнопки с эмодзи еды, транспорта и т.д.)
+        elif text in ["Еда", "Транспорт", "Жилье", "Развлечения",
+                      "Одежда", "Здоровье", "Образование", "Подарки"]:
+            # Сохраняем выбранную категорию во временные данные пользователя
+            context.user_data["category"] = text
+            # Просим ввести сумму для выбранной категории
+            await update.message.reply_text(f"Введите сумму для {text}:")
+        # Обрабатываем выбор категорий доходов
+        elif text in ["Зарплата", "Бизнес", "Инвестиции", "Подарок",
+                      "Премия", "Прочее"]:
+            context.user_data["category"] = text
+            await update.message.reply_text(f"Введите сумму для {text}:")
+
+        # Обрабатываем кнопку "Назад"
+        elif text == "Назад":
+            # Возвращаем главную клавиатуру
+            keyboard = ReplyKeyboardMarkup(self.kb, resize_keyboard=True)
+            await update.message.reply_text("Возвращаемся в главное меню", reply_markup=keyboard)
+
+        else:
+            # Если это не команда и не кнопка, считаем что пользователь ввел сумму
+            await self.hand_amnt(update, context, user_id, text)
