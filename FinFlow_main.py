@@ -423,3 +423,52 @@ class FinanceBot:
 
         # Отправляем текстовую статистику
         await update.message.reply_text(text)
+
+    async def show_cat(self, update: Update, user_id: str):
+        """
+        Показывает статистику по категориям доходов и расходов.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param user_id: ID пользователя в Telegram
+        :type user_id: str
+        """
+        if user_id not in self.data:
+            await update.message.reply_text("Нет операций")
+            return
+
+        # Собираем данные по категориям (аналогично show_statistics_with_charts)
+        expenses_by_category = {}
+        income_by_category = {}
+
+        for record in self.data[user_id]:
+            category = record["category"]
+            amount = record["amount"]
+
+            if record["type"] == "expense":
+                expenses_by_category[category] = expenses_by_category.get(category, 0) + amount
+            else:
+                income_by_category[category] = income_by_category.get(category, 0) + amount
+
+        text = "Статистика по категориям:\n\n"
+
+        text += "Расходы:\n"
+        if expenses_by_category:
+            total_expenses = sum(expenses_by_category.values())
+            for category, amount in sorted(expenses_by_category.items(), key=lambda x: x[1], reverse=True):
+                percent = (amount / total_expenses) * 100
+                text += f"{category}: {amount} руб. ({percent:.1f}%)\n"
+        else:
+            text += "Нет расходов\n"
+
+        text += "\n Доходы:\n"
+        if income_by_category:
+            total_income = sum(income_by_category.values())
+            for category, amount in sorted(income_by_category.items(), key=lambda x: x[1], reverse=True):
+                percent = (amount / total_income) * 100
+                text += f"{category}: {amount} руб. ({percent:.1f}%)\n"
+        else:
+            text += "Нет доходов\n"
+
+        await update.message.reply_text(text)
+
