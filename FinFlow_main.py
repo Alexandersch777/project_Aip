@@ -219,3 +219,32 @@ class FinanceBot:
         except ValueError:
             # Если преобразование в число не удалось
             await update.message.reply_text("Введите число!")
+
+    async def show_bal(self, update: Update, user_id: str):
+        """
+        Показывает текущий баланс пользователя.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param user_id: ID пользователя в Telegram
+        :type user_id: str
+        """
+        # Проверяем есть ли данные у пользователя
+        if user_id not in self.data:
+            await update.message.reply_text("Нет операций")
+            return
+
+        # Суммируем все доходы (транзакции с типом 'income')
+        income = sum(r['amount'] for r in self.data[user_id] if r['type'] == 'income')
+        # Суммируем все расходы (транзакции с типом 'expense')
+        expense = sum(r['amount'] for r in self.data[user_id] if r['type'] == 'expense')
+        # Вычисляем баланс
+        balance = income - expense
+        # Форматируем текст с результатами
+        text = f"""
+Доходы: {income} руб.
+Расходы: {expense} руб.
+Баланс: {balance} руб.
+        """
+        # Отправляем сообщение с балансом
+        await update.message.reply_text(text)
