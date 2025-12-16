@@ -248,3 +248,178 @@ class FinanceBot:
         """
         # Отправляем сообщение с балансом
         await update.message.reply_text(text)
+
+    async def show_stat(self, update: Update, user_id: str):
+        """
+        Показывает статистику с графиками доходов и расходов.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param user_id: ID пользователя в Telegram
+        :type user_id: str
+        """
+        # Проверяем есть ли данные для статистики
+        if user_id not in self.data or not self.data[user_id]:
+            await update.message.reply_text("Нет данных для статистики")
+            return
+
+        # Создаем словари для группировки данных по категориям
+        expenses_by_category = {}  # для расходов
+        income_by_category = {}  # для доходов
+
+        # Проходим по всем транзакциям пользователя
+        for record in self.data[user_id]:
+            category = record["category"]  # получаем категорию
+            amount = record["amount"]  # получаем сумму
+
+            # В зависимости от типа операции добавляем в соответствующий словарь
+            if record["type"] == "expense":
+                # Увеличиваем сумму для данной категории расходов
+                expenses_by_category[category] = expenses_by_category.get(category, 0) + amount
+            else:
+                # Увеличиваем сумму для данной категории доходов
+                income_by_category[category] = income_by_category.get(category, 0) + amount
+
+        # Отправляем диаграмму доходов
+        await self.send_inc_chrt(update, income_by_category)
+
+        # Отправляем диаграмму расходов
+        await self.send_exp_chrt(update, expenses_by_category)
+
+        # Отправляем текстовую статистику
+        await self.send_txt_stat(update, income_by_category, expenses_by_category)
+
+    async def send_inc_chrt(self, update: Update, income_by_category: dict):
+        """
+        Создает и отправляет круговую диаграмму доходов.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param income_by_category: Словарь с категориями доходов и суммами
+        :type income_by_category: dict
+        """
+        # Проверяем есть ли данные о доходах
+        if not income_by_category:
+            await update.message.reply_text("Нет данных о доходах")
+            return
+
+        # Создаем новую фигуру для графика
+        plt.figure(figsize=(8, 6))
+
+        # Получаем списки категорий и сумм
+        categories = list(income_by_category.keys())
+        amounts = list(income_by_category.values())
+
+        # Задаем зеленые цвета для доходов
+        colors = ['#90EE90', '#98FB98', '#8FBC8F', '#3CB371', '#2E8B57', '#228B22']
+
+        # Создаем круговую диаграмму
+        plt.pie(amounts,
+                labels=categories,  # подписи категорий
+                autopct='%1.1f%%',  # проценты на диаграмме
+                startangle=90,  # начальный угол
+                colors=colors[:len(categories)],  # цвета (обрезаем по количеству категорий)
+                textprops={'fontsize': 10})  # размер шрифта
+
+        # Устанавливаем заголовок
+        plt.title(' Доходы по категориям', fontsize=14, fontweight='bold')
+
+        # Создаем байтовый буфер для сохранения изображения
+        buf = io.BytesIO()
+        # Сохраняем график в буфер в формате PNG
+        plt.savefig(buf, format='png', dpi=80, bbox_inches='tight')
+        # Перемещаем указатель в начало буфера
+        buf.seek(0)
+        # Закрываем график для освобождения памяти
+        plt.close()
+
+        # Считаем общую сумму доходов
+        total_income = sum(amounts)
+        # Отправляем изображение пользователю
+        await update.message.reply_photo(
+            photo=buf,  # изображение из буфера
+            caption=f"Общие доходы: {total_income} руб."  # подпись к фото
+        )
+
+    async def send_exp_chrt(self, update: Update, expenses_by_category: dict):
+        """
+        Создает и отправляет круговую диаграмму расходов.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param expenses_by_category: Словарь с категориями расходов и суммами
+        :type expenses_by_category: dict
+        """
+        if not expenses_by_category:
+            await update.message.reply_text("Нет данных о расходах")
+            return
+
+        plt.figure(figsize=(8, 6))
+
+        categories = list(expenses_by_category.keys())
+        amounts = list(expenses_by_category.values())
+
+        # Задаем красные цвета для расходов
+        colors = ['#FFB6C1', '#FF69B4', '#FF1493', '#DC143C', '#B22222', '#8B0000']
+
+        plt.pie(amounts,
+                labels=categories,
+                autopct='%1.1f%%',
+                startangle=90,
+                colors=colors[:len(categories)],
+                textprops={'fontsize': 10})
+        plt.title('Расходы по категориям', fontsize=14, fontweight='bold')
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=80, bbox_inches='tight')
+        buf.seek(0)
+        plt.close()
+
+        total_expenses = sum(amounts)
+        await update.message.reply_photo(
+            photo=buf,
+            caption=f"Общие расходы: {total_expenses} руб."
+        )
+
+    async def send_txt_stat(self, update: Update, income_by_category: dict, expenses_by_category: dict):
+        """
+        Отправляет детальную текстовую статистику.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param income_by_category: Словарь с категориями доходов и суммами
+        :type income_by_category: dict
+        :param expenses_by_category: Словарь с категориями расходов и суммами
+        :type expenses_by_category: dict
+        """
+        # Считаем общие суммы
+        total_income = sum(income_by_category.values())
+        total_expenses = sum(expenses_by_category.values())
+        balance = total_income - total_expenses
+
+        # Начинаем формировать текст статистики
+        text = "Детальная статистика:\n\n"
+
+        # Добавляем раздел доходов
+        text += f"Общие доходы: {total_income} руб.\n"
+        if income_by_category:
+            text += "Доходы по категориям:\n"
+            # Сортируем категории по убыванию суммы
+            for category, amount in sorted(income_by_category.items(), key=lambda x: x[1], reverse=True):
+                # Вычисляем процент от общей суммы
+                percent = (amount / total_income) * 100
+                text += f"  {category}: {amount} руб. ({percent:.1f}%)\n"
+
+        # Добавляем раздел расходов
+        text += f"\n Общие расходы: {total_expenses} руб.\n"
+        if expenses_by_category:
+            text += "Расходы по категориям:\n"
+            for category, amount in sorted(expenses_by_category.items(), key=lambda x: x[1], reverse=True):
+                percent = (amount / total_expenses) * 100
+                text += f"  {category}: {amount} руб. ({percent:.1f}%)\n"
+
+        # Добавляем итоговый баланс
+        text += f"\n Итоговый баланс: {balance} руб."
+
+        # Отправляем текстовую статистику
+        await update.message.reply_text(text)
