@@ -472,3 +472,28 @@ class FinanceBot:
 
         await update.message.reply_text(text)
 
+    def run(self):
+        """
+        Запускает бота и начинает обработку сообщений.
+
+        :raises telegram.error.InvalidToken: Если указан неверный токен
+        :raises telegram.error.NetworkError: При проблемах с сетью
+        """
+        # Создаем приложение бота с указанным токеном
+        app = Application.builder().token(self.token).build()
+
+        # Регистрируем обработчики команд и сообщений
+        app.add_handler(CommandHandler("start", self.start))  # обработчик команды /start
+        app.add_handler(MessageHandler(filters.TEXT, self.hand_mess))  # обработчик всех текстовых сообщений
+
+        print("Бот запущен!")
+        # Запускаем бота в режиме опроса сервера Telegram
+        app.run_polling()
+
+
+# Точка входа в программу
+if __name__ == "__main__":
+    # Токен бота (должен быть получен от @BotFather)
+    TOKEN = "7094551997:AAHwaTRiMud4BmB7YBLCBkFJ78vg7W8nDpE"
+    # Создаем экземпляр бота и запускаем его
+    FinanceBot(TOKEN).run()
