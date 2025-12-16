@@ -100,3 +100,25 @@ class FinanceBot:
             "Выберите действие:",  # текст сообщения
             reply_markup=keyboard  # прикрепляем клавиатуру
         )
+    async def hand_mess(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Обрабатывает все текстовые сообщения от пользователя.
+
+        :param update: Объект с информацией о входящем сообщении
+        :type update: telegram.Update
+        :param context: Контекст выполнения, содержит дополнительные данные
+        :type context: telegram.ext.ContextTypes.DEFAULT_TYPE
+        """
+        # Получаем текст сообщения от пользователя
+        text = update.message.text
+        # Получаем ID пользователя (преобразуем в строку для consistency)
+        user_id = str(update.message.from_user.id)
+
+        # Обрабатываем нажатие кнопки "Доход"
+        if text == "Доход":
+            # Сохраняем в контексте что пользователь хочет добавить доход
+            context.user_data["action"] = "income"
+            # Создаем клавиатуру с категориями доходов
+            keyboard = ReplyKeyboardMarkup(self.inc_cat, resize_keyboard=True)
+            # Просим выбрать категорию
+            await update.message.reply_text("Выберите категорию дохода:", reply_markup=keyboard)
