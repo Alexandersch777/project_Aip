@@ -1,9 +1,13 @@
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import (Application,
+                          CommandHandler, MessageHandler,
+                          filters, ContextTypes)
 import json
 import os
 import matplotlib.pyplot as plt
 import io
+
+
 class FinanceBot:
     """
     Телеграм-бот для управления личными финансами.
@@ -36,6 +40,7 @@ class FinanceBot:
             ["Подарок", "Премия", "Прочее"],
             ["Назад"]
         ]
+
     def load_data(self):
         """
         Загружает финансовые данные пользователей из JSON файла.
@@ -49,9 +54,10 @@ class FinanceBot:
             if os.path.exists("data.json"):
                 with open("data.json", "r") as f:
                     return json.load(f)
-        except:
+        except Exception:
             pass
         return {}
+
     def save_data(self):
         """
         Сохраняет финансовые данные пользователей в JSON файл.
@@ -62,8 +68,9 @@ class FinanceBot:
         try:
             with open("data.json", "w") as f:
                 json.dump(self.data, f)
-        except:
+        except Exception:
             pass
+
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Обработчик команды /start - начало работы с ботом.
@@ -78,7 +85,10 @@ class FinanceBot:
             "Выберите действие:",
             reply_markup=keyboard
         )
-    async def hand_mess(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    async def hand_mess(self, update: Update,
+                        context: ContextTypes.DEFAULT_TYPE):
+
         """
         Обрабатывает все текстовые сообщения от пользователя.
 
@@ -89,35 +99,55 @@ class FinanceBot:
         """
         text = update.message.text
         user_id = str(update.message.from_user.id)
+
         if text == "Доход":
             context.user_data["action"] = "income"
             keyboard = ReplyKeyboardMarkup(self.inc_cat, resize_keyboard=True)
-            await update.message.reply_text("Выберите категорию дохода:", reply_markup=keyboard)
+            await update.message.reply_text(
+                "Выберите категорию дохода:",
+                reply_markup=keyboard
+            )
+
         elif text == "Расход":
-            context.user_data["action"] = "expense"  # сохраняем тип операции
+            context.user_data["action"] = "expense"
             keyboard = ReplyKeyboardMarkup(self.exp_cat, resize_keyboard=True)
-            await update.message.reply_text("Выберите категорию расхода:", reply_markup=keyboard)
+            await update.message.reply_text(
+                "Выберите категорию расхода:",
+                reply_markup=keyboard
+            )
+
         elif text == "Баланс":
             await self.show_bal(update, user_id)
+
         elif text == "Статистика":
             await self.show_stat(update, user_id)
+
         elif text == "Категории":
             await self.show_cat(update, user_id)
+
         elif text in ["Еда", "Транспорт", "Жилье", "Развлечения",
                       "Одежда", "Здоровье", "Образование", "Подарки"]:
             context.user_data["category"] = text
             await update.message.reply_text(f"Введите сумму для {text}:")
+
         elif text in ["Зарплата", "Бизнес", "Инвестиции", "Подарок",
                       "Премия", "Прочее"]:
             context.user_data["category"] = text
             await update.message.reply_text(f"Введите сумму для {text}:")
+
         elif text == "Назад":
             keyboard = ReplyKeyboardMarkup(self.kb, resize_keyboard=True)
-            await update.message.reply_text("Возвращаемся в главное меню", reply_markup=keyboard)
+            await update.message.reply_text(
+                "Возвращаемся в главное меню",
+                reply_markup=keyboard
+            )
 
         else:
             await self.hand_amnt(update, context, user_id, text)
-    async def hand_amnt(self, update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: str, text: str):
+
+    async def hand_amnt(self, update: Update,
+                        context: ContextTypes.DEFAULT_TYPE,
+                        user_id: str, text: str):
         """
         Обрабатывает ввод суммы для дохода или расхода.
 
@@ -135,26 +165,36 @@ class FinanceBot:
             amount = float(text)
             action = context.user_data.get("action")
             category = context.user_data.get("category")
+
             if not action or not category:
-                await update.message.reply_text("Ошибка: не выбрано действие или категория")
+                await update.message.reply_text(
+                    "Ошибка: не выбрано действие или категория"
+                )
                 return
+
             if user_id not in self.data:
                 self.data[user_id] = []
+
             record = {
                 "type": "income" if action == "income" else "expense",
                 "amount": amount,
                 "category": category
             }
+
             self.data[user_id].append(record)
             self.save_data()
+
             keyboard = ReplyKeyboardMarkup(self.kb, resize_keyboard=True)
             await update.message.reply_text(
                 f"{category} {amount} руб. добавлен!",
                 reply_markup=keyboard
             )
+
             context.user_data.clear()
+
         except ValueError:
             await update.message.reply_text("Введите число!")
+
     async def show_bal(self, update: Update, user_id: str):
         """
         Показывает текущий баланс пользователя.
@@ -167,15 +207,21 @@ class FinanceBot:
         if user_id not in self.data:
             await update.message.reply_text("Нет операций")
             return
-        inc = sum(r['amount'] for r in self.data[user_id] if r['type'] == 'income')
-        exp = sum(r['amount'] for r in self.data[user_id] if r['type'] == 'expense')
+
+        inc = sum(r['amount'] for r in self.data[user_id]
+                  if r['type'] == 'income')
+        exp = sum(r['amount'] for r in self.data[user_id]
+                  if r['type'] == 'expense')
         bal = inc - exp
+
         text = f"""
 Доходы: {inc} руб.
 Расходы: {exp} руб.
 Баланс: {bal} руб.
         """
+
         await update.message.reply_text(text)
+
     async def show_stat(self, update: Update, user_id: str):
         """
         Показывает статистику с графиками доходов и расходов.
@@ -188,23 +234,28 @@ class FinanceBot:
         if user_id not in self.data or not self.data[user_id]:
             await update.message.reply_text("Нет данных для статистики")
             return
+
         exp_by_cat = {}
         inc_by_cat = {}
+
         for record in self.data[user_id]:
             cat = record["category"]
             amount = record["amount"]
+
             if record["type"] == "expense":
                 exp_by_cat[cat] = exp_by_cat.get(cat, 0) + amount
             else:
                 inc_by_cat[cat] = inc_by_cat.get(cat, 0) + amount
+
         await self.send_inc_chrt(update, inc_by_cat)
         await self.send_exp_chrt(update, exp_by_cat)
         await self.send_txt_stat(update, inc_by_cat, exp_by_cat)
+
     async def send_inc_chrt(self, update: Update, income_by_category: dict):
         """
         Создает и отправляет круговую диаграмму доходов.
 
-        :param update: Объект с информацией о входящем сообщении
+        :param update: Объект с информацией о входящем сообщения
         :type update: telegram.Update
         :param income_by_category: Словарь с категориями доходов и суммами
         :type income_by_category: dict
@@ -212,21 +263,31 @@ class FinanceBot:
         if not income_by_category:
             await update.message.reply_text("Нет данных о доходах")
             return
+
         plt.figure(figsize=(8, 6))
+
         categories = list(income_by_category.keys())
         amounts = list(income_by_category.values())
-        colors = ['#90EE90', '#98FB98', '#8FBC8F', '#3CB371', '#2E8B57', '#228B22']
-        plt.pie(amounts,
-                labels=categories,
-                autopct='%1.1f%%',
-                startangle=90,
-                colors=colors[:len(categories)],
-                textprops={'fontsize': 10})
-        plt.title(' Доходы по категориям', fontsize=14, fontweight='bold')
+
+        colors = ['#90EE90', '#98FB98', '#8FBC8F',
+                  '#3CB371', '#2E8B57', '#228B22']
+
+        plt.pie(
+            amounts,
+            labels=categories,
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=colors[:len(categories)],
+            textprops={'fontsize': 10}
+        )
+
+        plt.title('Доходы по категориям', fontsize=14, fontweight='bold')
+
         buf = io.BytesIO()
         plt.savefig(buf, format='png', dpi=80, bbox_inches='tight')
         buf.seek(0)
         plt.close()
+
         total_income = sum(amounts)
         await update.message.reply_photo(
             photo=buf,
@@ -245,27 +306,40 @@ class FinanceBot:
         if not expenses_by_category:
             await update.message.reply_text("Нет данных о расходах")
             return
+
         plt.figure(figsize=(8, 6))
+
         categories = list(expenses_by_category.keys())
         amounts = list(expenses_by_category.values())
-        colors = ['#FFB6C1', '#FF69B4', '#FF1493', '#DC143C', '#B22222', '#8B0000']
-        plt.pie(amounts,
-                labels=categories,
-                autopct='%1.1f%%',
-                startangle=90,
-                colors=colors[:len(categories)],
-                textprops={'fontsize': 10})
+
+        colors = ['#FFB6C1', '#FF69B4', '#FF1493',
+                  '#DC143C', '#B22222', '#8B0000']
+
+        plt.pie(
+            amounts,
+            labels=categories,
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=colors[:len(categories)],
+            textprops={'fontsize': 10}
+        )
+
         plt.title('Расходы по категориям', fontsize=14, fontweight='bold')
+
         buf = io.BytesIO()
         plt.savefig(buf, format='png', dpi=80, bbox_inches='tight')
         buf.seek(0)
         plt.close()
+
         total_expenses = sum(amounts)
         await update.message.reply_photo(
             photo=buf,
             caption=f"Общие расходы: {total_expenses} руб."
         )
-    async def send_txt_stat(self, update: Update, income_by_category: dict, expenses_by_category: dict):
+
+    async def send_txt_stat(self, update: Update,
+                            income_by_category: dict,
+                            expenses_by_category: dict):
         """
         Отправляет детальную текстовую статистику.
 
@@ -279,21 +353,36 @@ class FinanceBot:
         total_income = sum(income_by_category.values())
         total_expenses = sum(expenses_by_category.values())
         balance = total_income - total_expenses
+
         text = "Детальная статистика:\n\n"
         text += f"Общие доходы: {total_income} руб.\n"
+
         if income_by_category:
             text += "Доходы по категориям:\n"
-            for category, amount in sorted(income_by_category.items(), key=lambda x: x[1], reverse=True):
+            for category, amount in sorted(
+                income_by_category.items(),
+                key=lambda x: x[1],
+                reverse=True
+            ):
                 percent = (amount / total_income) * 100
                 text += f"  {category}: {amount} руб. ({percent:.1f}%)\n"
-        text += f"\n Общие расходы: {total_expenses} руб.\n"
+
+        text += f"\nОбщие расходы: {total_expenses} руб.\n"
+
         if expenses_by_category:
             text += "Расходы по категориям:\n"
-            for category, amount in sorted(expenses_by_category.items(), key=lambda x: x[1], reverse=True):
+            for category, amount in sorted(
+                expenses_by_category.items(),
+                key=lambda x: x[1],
+                reverse=True
+            ):
                 percent = (amount / total_expenses) * 100
                 text += f"  {category}: {amount} руб. ({percent:.1f}%)\n"
-        text += f"\n Итоговый баланс: {balance} руб."
+
+        text += f"\nИтоговый баланс: {balance} руб."
+
         await update.message.reply_text(text)
+
     async def show_cat(self, update: Update, user_id: str):
         """
         Показывает статистику по категориям доходов и расходов.
@@ -306,34 +395,56 @@ class FinanceBot:
         if user_id not in self.data:
             await update.message.reply_text("Нет операций")
             return
+
         expenses_by_category = {}
         income_by_category = {}
+
         for record in self.data[user_id]:
             category = record["category"]
             amount = record["amount"]
+
             if record["type"] == "expense":
-                expenses_by_category[category] = expenses_by_category.get(category, 0) + amount
+                expenses_by_category[category] = (
+                    expenses_by_category.get(category, 0) + amount
+                )
             else:
-                income_by_category[category] = income_by_category.get(category, 0) + amount
+                income_by_category[category] = (
+                    income_by_category.get(category, 0) + amount
+                )
+
         text = "Статистика по категориям:\n\n"
         text += "Расходы:\n"
+
         if expenses_by_category:
             total_expenses = sum(expenses_by_category.values())
-            for category, amount in sorted(expenses_by_category.items(), key=lambda x: x[1], reverse=True):
+            for category, amount in sorted(
+                expenses_by_category.items(),
+                key=lambda x: x[1],
+                reverse=True
+            ):
                 percent = (amount / total_expenses) * 100
                 text += f"{category}: {amount} руб. ({percent:.1f}%)\n"
         else:
             text += "Нет расходов\n"
-        text += "\n Доходы:\n"
+
+        text += "\nДоходы:\n"
+
         if income_by_category:
             total_income = sum(income_by_category.values())
-            for category, amount in sorted(income_by_category.items(), key=lambda x: x[1], reverse=True):
+            for category, amount in sorted(
+                income_by_category.items(),
+                key=lambda x: x[1],
+                reverse=True
+            ):
                 percent = (amount / total_income) * 100
                 text += f"{category}: {amount} руб. ({percent:.1f}%)\n"
         else:
             text += "Нет доходов\n"
+
         await update.message.reply_text(text)
+
     def run(self):
+
         """
         Запускает бота и начинает обработку сообщений.
 
@@ -343,11 +454,11 @@ class FinanceBot:
         app = Application.builder().token(self.token).build()
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(MessageHandler(filters.TEXT, self.hand_mess))
+
         print("Бот запущен!")
         app.run_polling()
 
 
-# Точка входа в программу
 if __name__ == "__main__":
     TOKEN = "7094551997:AAHwaTRiMud4BmB7YBLCBkFJ78vg7W8nDpE"
     FinanceBot(TOKEN).run()
