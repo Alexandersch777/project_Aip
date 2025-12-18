@@ -1,81 +1,54 @@
 from FinFlow_main import FinanceBot
-from unittest.mock import patch
+import os
+import json
+
+def test_init_positive_valid_token():
+    """Тест 1: Инициализация с валидным токеном"""
+    test_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+    bot = FinanceBot(test_token)
+    assert bot.token == test_token
 
 
-def test_init():
-    with patch('os.path.exists', return_value=False):
-        bot = FinanceBot("test_token")
-        assert bot.token == "test_token"
-        assert bot.data == {}
+def test_init_negative_none_token():
+    """Негативный тест 1: Инициализация с None вместо токена"""
+    bot = FinanceBot(None)
+    assert bot.token is None
 
 
-def test_init_neg():
-    with patch('os.path.exists', return_value=False):
-        bot = FinanceBot(None)
-        assert bot.token is None
-        assert bot.data == {}
+def test_load_data_returns_dict():
+    """Тест 2: проверяем что load_data() возвращает словарь"""
+    bot = FinanceBot("test_token")
+    result = bot.load_data()
+    assert isinstance(result, dict)
+
+def test_load_data_returns_list():
+    """Негативный тест 2: проверяем что load_data() НЕ словарь """
+    bot = FinanceBot("test_token")
+    result = bot.load_data()
+    assert not isinstance(result, list)
 
 
-def test_add_data():
-    with patch('os.path.exists', return_value=False):
-        bot = FinanceBot("test_token")
-    bot.data["user1"] = []
-    bot.data["user1"].append({"type": "income", "amount": 100,
-                              "category": "Тест1"})
-    bot.data["user1"].append({"type": "expense", "amount": 50,
-                              "category": "Тест2"})
-
-    assert len(bot.data["user1"]) == 2
-    assert bot.data["user1"][0]["amount"] == 100
-    assert bot.data["user1"][1]["amount"] == 50
-
-
-def test_calculate():
-
-    with patch('os.path.exists', return_value=False):
-        bot = FinanceBot("test_token")
+def test_save_data_positive():
+    """Тест 3: сохраняем нормальные данные"""
+    bot = FinanceBot("test_token")
     bot.data = {
-        "user1": [
-            {"type": "income", "amount": 1000, "category": "Зарплата"},
-            {"type": "expense", "amount": 500, "category": "Еда"},
-            {"type": "income", "amount": 200, "category": "Премия"}
+        "user123": [
+            {"type": "income", "amount": 1000, "category": "Зарплата"}
         ]
     }
-    user_id = "user1"
-    income = sum(r['amount'] for r in bot.data[user_id]
-                 if r['type'] == 'income')
-    expense = sum(r['amount'] for r in bot.data[user_id]
-                  if r['type'] == 'expense')
-
-    assert income == 1200
-    assert expense == 500
+    bot.save_data()
+    assert os.path.exists("data.json")
+    with open("data.json", "r", encoding='utf-8') as f:
+        saved_data = json.load(f)
+    assert saved_data == bot.data
 
 
-def test_calculate_empty():
-    with patch('os.path.exists', return_value=False):
-        bot = FinanceBot("test_token")
-
+def test_save_data_empty_dict():
+    """Негативный тест: сохраняем пустые данные"""
+    bot = FinanceBot("test_token")
     bot.data = {}
-
-    assert "user999" not in bot.data
-
-
-def test_calculate_wrong_type():
-    with patch('os.path.exists', return_value=False):
-        bot = FinanceBot("test_token")
-
-    bot.data = {
-        "user1": [
-            {"type": "unknown", "amount": 100, "category": "Тест"}
-        ]
-    }
-
-    user_id = "user1"
-
-    income = sum(r['amount'] for r in bot.data[user_id]
-                 if r['type'] == 'income')
-    expense = sum(r['amount'] for r in bot.data[user_id]
-                  if r['type'] == 'expense')
-
-    assert income == 0
-    assert expense == 0
+    bot.save_data()
+    assert os.path.exists("data.json")
+    with open("data.json", "r", encoding='utf-8') as f:
+        saved_data = json.load(f)
+    assert saved_data == {}
