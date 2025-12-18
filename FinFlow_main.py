@@ -1,3 +1,4 @@
+import telegram
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (Application,
                           CommandHandler, MessageHandler,
@@ -14,6 +15,16 @@ class FinanceBot:
 
     Позволяет пользователям отслеживать доходы и расходы,
     просматривать статистику и получать визуализацию данных.
+    :ivar token: Токен бота Telegram
+    :type token: str
+    :ivar data: Финансовые данные всех пользователей
+    :type data: dict
+    :ivar kb: Главная клавиатура
+    :type kb: list
+    :ivar exp_cat: Категории расходов
+    :type exp_cat: list
+    :ivar inc_cat: Категории доходов
+    :type inc_cat: list
     """
 
     def __init__(self, token: str):
@@ -47,8 +58,6 @@ class FinanceBot:
 
         :return: Словарь с данными пользователей или пустой словарь при ошибке
         :rtype: dict
-        :raises json.JSONDecodeError: Если файл содержит некорректный JSON
-        :raises OSError: При проблемах с доступом к файлу
         """
         try:
             if os.path.exists("data.json"):
@@ -63,13 +72,12 @@ class FinanceBot:
         Сохраняет финансовые данные пользователей в JSON файл.
 
         :raises OSError: При проблемах с записью в файл
-        :raises TypeError: Если данные не могут быть сериализованы в JSON
         """
         try:
-            with open("data.json", "w") as f:
-                json.dump(self.data, f)
+            with open("data.json", "w", encoding='utf-8') as f:
+                json.dump(self.data, f, ensure_ascii=False, indent=2)
         except Exception:
-            pass
+            raise OSError
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -94,7 +102,7 @@ class FinanceBot:
 
         :param update: Объект с информацией о входящем сообщении
         :type update: telegram.Update
-        :param context: Контекст выполнения, содержит дополнительные данные
+        :param context: Контекст выполнения, содержит доп.данные(bt,ct,usr_dat)
         :type context: telegram.ext.ContextTypes.DEFAULT_TYPE
         """
         text = update.message.text
@@ -444,20 +452,23 @@ class FinanceBot:
         await update.message.reply_text(text)
 
     def run(self):
+        try:
+            """
+            Запускает бота и начинает обработку сообщений.
+                
+            :raises telegram.error.InvalidToken: Если указан неверный токен
+            :raises telegram.error.NetworkError: При проблемах с сетью
+            """
+            app = Application.builder().token(self.token).build()
+            app.add_handler(CommandHandler("start", self.start))
+            app.add_handler(MessageHandler(filters.TEXT, self.hand_mess))
 
-        """
-        Запускает бота и начинает обработку сообщений.
-
-        :raises telegram.error.InvalidToken: Если указан неверный токен
-        :raises telegram.error.NetworkError: При проблемах с сетью
-        """
-        app = Application.builder().token(self.token).build()
-        app.add_handler(CommandHandler("start", self.start))
-        app.add_handler(MessageHandler(filters.TEXT, self.hand_mess))
-
-        print("Бот запущен!")
-        app.run_polling()
-
+            print("Бот запущен!")
+            app.run_polling()
+        except telegram.error.InvalidToken:
+            raise telegram.error.InvalidToken
+        except telegram.error.NetworkError:
+            raise telegram.error.NetworkError
 
 if __name__ == "__main__":
     TOKEN = "7094551997:AAHwaTRiMud4BmB7YBLCBkFJ78vg7W8nDpE"
