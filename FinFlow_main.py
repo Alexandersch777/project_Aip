@@ -455,7 +455,7 @@ class FinanceBot:
         try:
             """
             Запускает бота и начинает обработку сообщений.
-                
+                        
             :raises telegram.error.InvalidToken: Если указан неверный токен
             :raises telegram.error.NetworkError: При проблемах с сетью
             """
@@ -469,6 +469,7 @@ class FinanceBot:
             raise telegram.error.InvalidToken
         except telegram.error.NetworkError:
             raise telegram.error.NetworkError
+
 
 if __name__ == "__main__":
     TOKEN = "7094551997:AAHwaTRiMud4BmB7YBLCBkFJ78vg7W8nDpE"
