@@ -472,5 +472,5 @@ class FinanceBot:
 
 
 if __name__ == "__main__":
-    TOKEN = "7094551997:AAHwaTRiMud4BmB7YBLCBkFJ78vg7W8nDpE"
+    TOKEN = "****"
     FinanceBot(TOKEN).run()
